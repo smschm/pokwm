@@ -1,0 +1,8 @@
+Name: pokwm
+Version: 0.0.0
+Cabal-Version: >= 1.2
+Build-Type: Simple
+
+Executable pokwm
+    Main-Is: Main.hs
+    Build-Depends: X11 ==1.5.*, base >= 3.0, mtl >= 1.1, unix >= 2.4, containers
