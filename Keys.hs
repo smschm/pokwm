@@ -15,7 +15,7 @@ modMask     = mod4Mask
 keys :: M.Map (KeyMask, KeySym) (P ())
 keys = M.fromList $
     [ ((modMask, xK_Return), O.spawn "uxterm")
-    , ((modMask, xK_k), O.kill)
+    , ((modMask, xK_k), C.killCurrent)
     , ((modMask, xK_s), C.splitV)
     , ((modMask, xK_u), C.unsplit)
     , ((modMask, xK_e), C.nextframe)

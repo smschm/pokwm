@@ -33,8 +33,8 @@ manage w = do
     --windows $ W.manage W.Nice w
 
 -- | kills a specific window
-kill :: P ()
-kill = withDisplay $ \d -> withCurrent $ \w -> do
+kill :: Window -> P ()
+kill w = withDisplay $ \d -> do
     PConf {wmDelete = wmdelt, wmProtocols = wmprot} <- ask
     protocols <- io $ getWMProtocols d w
     io $ if wmdelt `elem` protocols
@@ -52,7 +52,8 @@ rescreen = do
 
 -- | sets the focus to a specific window
 setFocus :: Window -> P ()
-setFocus w = withWinState $ \ws -> do
+--setFocus w = withWinState $ \ws -> do
+setFocus w = do
     PConf { display = dpy } <- ask
 
     -- clear mouse button grab and border on other windows

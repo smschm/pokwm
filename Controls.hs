@@ -67,6 +67,10 @@ nextframe = do
     O.debug $ print s
     windows W.focusNext
 
+-- |Kills currently focused window
+killCurrent :: P ()
+killCurrent = withCurrent O.kill
+
 -- ---------------------------------------------------------------------
 -- Convenient wrappers to state -- some from xmonad 0.2
 
