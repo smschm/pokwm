@@ -15,7 +15,7 @@ windows f = do
     old  <- gets windowState
     let new = f old
     modify (\s -> s { windowState = new })
-    O.refresh
+    refresh
 
 unsplit :: P ()
 unsplit = windows W.unsplit
@@ -29,15 +29,34 @@ unmanage = windows . W.delete
 
 -- | sets the input focus to the currently active window or root if none
 setTopFocus :: P ()
-setTopFocus = O.withWinState $ \s -> maybe (O.setFocus =<< asks rootWin)
+setTopFocus = withWinState $ \s -> maybe (O.setFocus =<< asks rootWin)
                                          O.setFocus (W.peek s)
+
+-- | repopulates the screen with the windows we want to see
+refresh :: P ()
+refresh = do
+    debugP $ putStrLn "refresh called."
+    PState { windowState = ws, xineScreens = xs } <- get
+    d <- asks display
+
+    (`mapM` (W.allLeaves ws)) $ \l -> do
+        let s = W.screenid l
+            w = W.window l
+            e = W.extent l
+            --r = genericIndex xs s
+
+        whenJust w (\jw -> io $ do
+           O.tileWindow d jw e
+           raiseWindow d jw )
+    setTopFocus
+    O.clearEnterEvents
 
 -- |switches focus to the next window
 nextwin :: P ()
 nextwin = do
     s <- gets windowState
-    O.debug $ putStrLn "nextwin: current state is:"
-    O.debug $ print s
+    debugP $ putStrLn "nextwin: current state is:"
+    debugP $ print s
     windows W.next
 
 -- |switches focus to next frame

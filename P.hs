@@ -10,10 +10,10 @@ import Control.Monad.State
 import System.IO
 
 --import Operations
-import WindowSplit
+import qualified WindowSplit as W
 
 data PState = PState
-  { windowState :: !WindowCtx
+  { windowState :: !W.WindowCtx
   , dimensions  :: !(Position,Position)
   , xineScreens :: ![Rectangle] }
   deriving (Show)
@@ -29,6 +29,8 @@ newtype P a = P (ReaderT PConf (StateT PState IO) a)
     deriving (Functor, Monad, MonadIO,
               MonadState PState, MonadReader PConf)
 
+debugP = io
+
 runP :: PConf -> PState -> P a -> IO ()
 runP c st (P a) = runStateT (runReaderT a c) st >> return ()
 
@@ -43,3 +45,36 @@ trace msg = liftIO $! do hPutStrLn stderr msg; hFlush stderr
 
 io :: IO a -> P a
 io = liftIO
+
+-- ---------------------------------------------------------------------
+-- Convenient wrappers to state -- some from xmonad 0.2
+
+-- | Run a monad action with the current display
+withDisplay :: (Display -> P a) -> P a
+withDisplay f = asks display >>= f
+
+-- | Run a monadic action with the current WindowState
+withWinState :: (W.WindowCtx -> P a) -> P a
+withWinState f = gets windowState >>= f
+
+-- | Run an action with the current window, if it's there
+withCurrent :: (Window -> P ()) -> P ()
+withCurrent f = do
+    ws <- gets windowState
+    whenJust (W.peek ws) f
+
+-- | True if the given window is the root window
+isRoot :: Window -> P Bool
+isRoot w = liftM (w==) (asks rootWin)
+
+-- | True if the given window is managed by us
+isClient :: Window -> P Bool
+isClient w = do
+    debugP $ do
+        putStr "calling isClient on "
+        print w
+    isC <- withWinState (\ws -> return (W.member w ws))
+    debugP $ do
+        putStr "result: "
+        print isC
+    return isC
