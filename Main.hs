@@ -12,22 +12,11 @@ import Control.Monad.State
 import P
 import Operations
 import Controls
+import Keys
 import qualified WindowSplit as W
 
-modMask, numlockMask :: KeyMask
-modMask     = mod4Mask
+numlockMask :: KeyMask
 numlockMask = mod2Mask
-
--- |a mapping from keys and their masks to P () actions to take
-keys :: M.Map (KeyMask, KeySym) (P ())
-keys = M.fromList $
-    [ ((modMask, xK_Return), spawn "uxterm")
-    , ((modMask, xK_k), kill)
-    , ((modMask, xK_s), splitV)
-    , ((modMask, xK_u), unsplit)
-    , ((modMask, xK_e), nextframe)
-    , ((modMask, xK_Tab), nextwin) ] 
-
 
 main :: IO ()
 main = do
