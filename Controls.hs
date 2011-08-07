@@ -66,3 +66,28 @@ nextframe = do
     O.debug $ putStrLn "nextframe: current state is:"
     O.debug $ print s
     windows W.focusNext
+
+-- ---------------------------------------------------------------------
+-- Convenient wrappers to state -- some from xmonad 0.2
+
+-- | Run a monadic action with the current WindowState
+withWinState :: (W.WindowCtx -> P a) -> P a
+withWinState f = gets windowState >>= f
+
+-- | Run an action with the current window, if it's there
+withCurrent :: (Window -> P ()) -> P ()
+withCurrent f = do
+    ws <- gets windowState
+    whenJust (W.peek ws) f
+
+-- | True if the given window is managed by us
+isClient :: Window -> P Bool
+isClient w = do
+    debugP $ do
+        putStr "calling isClient on "
+        print w
+    isC <- withWinState (\ws -> return (W.member w ws))
+    debugP $ do
+        putStr "result: "
+        print isC
+    return isC
