@@ -13,17 +13,10 @@ import System.Posix.Process (executeFile, forkProcess, getProcessStatus, createS
 import System.Exit
 
 import P
+--import Controls
 import qualified WindowSplit as W
 
 debug = io
-
--- | lifts a pure function that mutates a WindowState into the P monad
-windows :: (W.WindowCtx -> W.WindowCtx) -> P ()
-windows f = do
-    old  <- gets windowState
-    let new = f old
-    modify (\s -> s { windowState = new })
-    refresh
 
 -- | puts a new window under our management
 manage :: Window -> P ()
@@ -37,17 +30,7 @@ manage w = do
                       .|. propertyChangeMask
         mapWindow d w
         --setWindowBorderWidth d w borderWidth
-    windows $ W.manage W.Nice w
-
--- | removes a window from our management
-unmanage :: Window -> P ()
-unmanage = windows . W.delete
-
-unsplit :: P ()
-unsplit = windows W.unsplit
-
-splitV :: P ()
-splitV = windows W.splitV
+    --windows $ W.manage W.Nice w
 
 -- | kills a specific window
 kill :: P ()
@@ -83,14 +66,9 @@ refresh = do
         whenJust w (\jw -> io $ do
            tileWindow d jw e
            raiseWindow d jw )
-    setTopFocus
+    --setTopFocus
     clearEnterEvents
 
-
--- | sets the input focus to the currently active window or root if none
-setTopFocus :: P ()
-setTopFocus = withWinState $ \s -> maybe (setFocus =<< asks rootWin)
-                                         setFocus (W.peek s)
 
 -- | sets the focus to a specific window
 setFocus :: Window -> P ()
@@ -123,21 +101,6 @@ tileWindow d w r = do
     moveResizeWindow d w (rect_x r) (rect_y r)
                          (rect_width  r - bw*2) (rect_height r - bw*2)
 
--- |switches focus to the next window
-nextwin :: P ()
-nextwin = do
-    s <- gets windowState
-    debug $ putStrLn "nextwin: current state is:"
-    debug $ print s
-    windows W.next
-
--- |switches focus to next frame
-nextframe :: P ()
-nextframe = do
-    s <- gets windowState
-    debug $ putStrLn "nextframe: current state is:"
-    debug $ print s
-    windows W.focusNext
 -- ---------------------------------------------------------------------
 -- Convenient wrappers to state -- some from xmonad 0.2
 

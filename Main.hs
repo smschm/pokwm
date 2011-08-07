@@ -11,6 +11,7 @@ import Control.Monad.State
 
 import P
 import Operations
+import Controls
 import qualified WindowSplit as W
 
 modMask, numlockMask :: KeyMask
@@ -101,6 +102,7 @@ handle (KeyEvent {ev_event_type = t, ev_state = m, ev_keycode = code})
         whenJust (M.lookup (complement
           (numlockMask .|. lockMask) .&. m,s) keys) id
 
+-- Thrown when a 
 handle (MapRequestEvent {ev_window = w}) = withDisplay $
   \dpy -> do
     wa <- io $ getWindowAttributes dpy w -- ignore override windows
