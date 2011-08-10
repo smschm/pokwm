@@ -12,7 +12,7 @@ import qualified Operations as O
 -- | lifts a pure function that mutates a WindowState into the P monad
 windows :: (W.WindowCtx -> W.WindowCtx) -> P ()
 windows f = do
-    old  <- gets windowState
+    old <- gets windowState
     let new = f old
     modify (\s -> s { windowState = new })
     refresh
@@ -46,8 +46,9 @@ refresh = do
             --r = genericIndex xs s
 
         whenJust w (\jw -> io $ do
-           O.tileWindow d jw e
-           raiseWindow d jw )
+            (putStr "  tiling & raising " >> print jw) -- TODO when debug?
+            O.tileWindow d jw e
+            raiseWindow d jw )
     setTopFocus
     O.clearEnterEvents
 

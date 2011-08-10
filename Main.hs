@@ -8,6 +8,8 @@ import Graphics.X11.Xlib.Extras
 import Graphics.X11.Xinerama    (getScreenInfo)
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Concurrent.MVar
+import Control.Concurrent
 
 import P
 import Operations
@@ -23,6 +25,7 @@ main = do
   dpy    <- openDisplay ""
   let dflt = defaultScreen dpy
   rootw  <- rootWindow dpy dflt
+  evmv   <- newEmptyMVar
   wmdelt <- internAtom dpy "WM_DELETE_WINDOW" False
   wmprot <- internAtom dpy "WM_PROTOCOLS"     False
   xinesc <- getScreenInfo dpy
@@ -34,6 +37,7 @@ main = do
           { display       = dpy
           , rootWin       = rootw
           --, keyMap        = defaultKeys
+          , evMVar        = evmv
           , wmDelete      = wmdelt
           , wmProtocols   = wmprot }
       st = PState
@@ -54,11 +58,20 @@ main = do
   sync dpy False
 
   ws <- scan dpy rootw
-  allocaXEvent $ \e ->
-      runP cf st $ do
-          mapM_ manage ws
-          forever $ handle =<< io (nextEvent dpy e >> getEvent e)
+  forkIO (allocaXEvent $ \e -> xevThread evmv dpy e)
+  forkIO (pevThread evmv)
+  runP cf st $ do
+      mapM_ manage ws
+      forever $ do --handle =<< io (nextEvent dpy e >> getEvent e)
+          ev <- io (takeMVar evmv)
+          handle ev
     where forever a = a >> forever a
+          xevThread mv dpy e = forever $ do
+              nextEvent dpy e
+              ev <- getEvent e
+              putMVar mv (XEv ev)
+          pevThread mv = return ()
+              
 
 -- |run on startup, scans for windows to try to manage and manages them.
 scan :: Display -> Window -> IO [Window]
@@ -83,28 +96,32 @@ grabKeys dpy rootw = do
 
 -- |Main event handler, maps each event onto a P ().
 --  Most of them with apologies to XMonad 0.2
-handle :: Event -> P ()
+handle :: PEvent -> P ()
 
-handle (KeyEvent {ev_event_type = t, ev_state = m, ev_keycode = code})
+handle (XEv (KeyEvent {ev_event_type = t, ev_state = m, ev_keycode = code}))
     | t == keyPress = withDisplay $ \dpy -> do
-        s  <- io $ keycodeToKeysym dpy code 0
-        whenJust (M.lookup (complement
-          (numlockMask .|. lockMask) .&. m,s) keys) id
+        s <- io $ keycodeToKeysym dpy code 0
+        let mSane = (complement (numlockMask .|. lockMask)) .&. m
+        debugP $ putStr "got key: "
+        debugP $ (print (mSane,s))
+        whenJust (M.lookup (mSane,s) keys) id
 
 -- Thrown when a 
-handle (MapRequestEvent {ev_window = w}) = withDisplay $
+handle (XEv (MapRequestEvent {ev_window = w})) = withDisplay $
   \dpy -> do
     wa <- io $ getWindowAttributes dpy w -- ignore override windows
-    when (not (wa_override_redirect wa)) $ manage w
+    when (not (wa_override_redirect wa)) $ do
+      manage w
+      windows $ W.manage W.Nice w
 
-handle (DestroyWindowEvent {ev_window = w}) = whenM (isClient w) $ unmanage w
-handle (UnmapEvent         {ev_window = w}) = whenM (isClient w) $ unmanage w
+handle (XEv (DestroyWindowEvent {ev_window = w})) = whenM (isClient w) $ unmanage w
+handle (XEv (UnmapEvent         {ev_window = w})) = whenM (isClient w) $ unmanage w
 
-handle e@(MappingNotifyEvent {ev_window = w}) = do
+handle (XEv e@(MappingNotifyEvent {ev_window = w})) = do
     io $ refreshKeyboardMapping e
     when (ev_request e == mappingKeyboard) $ withDisplay $ io . flip grabKeys w
 
-handle e@(ConfigureRequestEvent {}) = withDisplay $ \dpy -> do
+handle (XEv e@(ConfigureRequestEvent {})) = withDisplay $ \dpy -> do
     io $ configureWindow dpy (ev_window e) (ev_value_mask e) $ WindowChanges
         { wc_x            = ev_x e
         , wc_y            = ev_y e
@@ -116,6 +133,6 @@ handle e@(ConfigureRequestEvent {}) = withDisplay $ \dpy -> do
     io $ sync dpy False
 
 
-handle (ConfigureEvent {ev_window = w}) = whenM (isRoot w) rescreen
+handle (XEv (ConfigureEvent {ev_window = w})) = whenM (isRoot w) rescreen
 
 handle _ = return () -- ignore everything except the above

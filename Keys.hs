@@ -19,4 +19,4 @@ keys = M.fromList $
     , ((modMask, xK_s), C.splitV)
     , ((modMask, xK_u), C.unsplit)
     , ((modMask, xK_e), C.nextframe)
-    , ((modMask, xK_Tab), C.nextwin) ] 
+    , ((modMask, xK_n), C.nextwin) ] 

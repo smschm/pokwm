@@ -6,11 +6,14 @@ import Graphics.X11.Xlib.Extras
 
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Concurrent.MVar
 
 import System.IO
 
 --import Operations
 import qualified WindowSplit as W
+
+data PEvent = XEv Event | SockEv String
 
 data PState = PState
   { windowState :: !W.WindowCtx
@@ -22,8 +25,9 @@ data PConf = PConf
   { display     :: Display
   , rootWin     :: !Window
   , wmDelete    :: !Atom
-  , wmProtocols :: !Atom }
-  deriving (Show)
+  , wmProtocols :: !Atom
+  , evMVar      :: MVar PEvent }
+ -- deriving (Show)
 
 newtype P a = P (ReaderT PConf (StateT PState IO) a)
     deriving (Functor, Monad, MonadIO,
