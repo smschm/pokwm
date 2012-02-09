@@ -20,3 +20,5 @@ is:
 *	mod4-k: kill the current window
 
 And it doesn't even do it very well!  Look forward to future releases.
+
+:bomb: **NOTE:** This is now a completely dead project, since I don't primarily use X11 anymore!
